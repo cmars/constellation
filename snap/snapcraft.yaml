@@ -1,0 +1,61 @@
+name: constellation
+version: 'master'
+summary: Peer-to-peer encrypted message exchange
+description: |
+  Constellation forms a network of nodes, each of which advertises a list of public keys that they are the recipient for. Each node exposes an API which allows the user to send a payload to one or more public keys. That payload will be encrypted for the public key before being transferred over the wire to the recipient node. You can think of it as a network of Mail Transfer Agents (MTAs) exchanging PGP-encrypted emails.
+
+grade: stable
+confinement: strict
+
+apps:
+  node:
+    command: bin/constellation-wrapper
+    plugs:
+      - network
+      - network-bind
+  config:
+    command: bin/config.py
+
+parts:
+  constellation:
+    source: https://github.com/jpmorganchase/constellation.git
+    source-tag: master
+    plugin: nil
+    build-packages:
+      - libdb-dev
+      - libleveldb-dev
+      - libsodium-dev
+      - zlib1g-dev
+      - libtinfo-dev
+    stage-packages:
+      - libleveldb1v5
+      - libsodium18
+      - zlib1g
+      - libtinfo5
+    prepare: |
+      if [ ! `command -v stack` ]; then
+          curl -sSL https://get.haskellstack.org/ | sh -s - -f
+          stack setup
+      fi
+    build: |
+      stack install
+    install: |
+      mkdir -p $SNAPCRAFT_PART_INSTALL/bin
+      cp .stack-work/install/x86_64-linux/lts-*/*/bin/constellation-node $SNAPCRAFT_PART_INSTALL/bin
+    stage:
+      - bin/constellation-node
+      - lib
+      - usr/lib
+  scripts:
+    source: .
+    plugin: nil
+    stage-packages:
+      - python3-jinja2
+    install: |
+      mkdir -p $SNAPCRAFT_PART_INSTALL/bin
+      cp ../../../snap/config.py $SNAPCRAFT_PART_INSTALL/bin
+      cp ../../../snap/constellation-wrapper $SNAPCRAFT_PART_INSTALL/bin
+    stage:
+      - bin/config.py
+      - bin/constellation-wrapper
+      - usr/lib
